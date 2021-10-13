@@ -128,10 +128,5 @@ int main()
 	for (int i = 0; i < n; ++i) //
 		x[i] /= n;				//
 	cout << check(1.e-10, x, y);
-	for (int i = 0; i < n; ++i)
-	{
-		cout << x[i] << "!!!!!!" << y[i] << endl;
-	}
-	while (1);
 	return 0;
 }
