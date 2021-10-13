@@ -1,3 +1,0 @@
-C:/Users/Nikita/Desktop/git projects/FFT using matrices/.gitignore/CMakeFiles/FFT_using_matrices.dir
-C:/Users/Nikita/Desktop/git projects/FFT using matrices/.gitignore/CMakeFiles/ALL_BUILD.dir
-C:/Users/Nikita/Desktop/git projects/FFT using matrices/.gitignore/CMakeFiles/ZERO_CHECK.dir

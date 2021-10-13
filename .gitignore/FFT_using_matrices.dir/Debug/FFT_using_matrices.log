@@ -1,5 +1,0 @@
-﻿  Building Custom Rule C:/Users/Nikita/Desktop/git projects/FFT using matrices/CMakeLists.txt
-  source.cpp
-C:\Users\Nikita\Desktop\git projects\FFT using matrices\src\source.cpp(74): warning C4244: инициализация: преобразование "double" в "int", возможна потеря данных
-C:\Users\Nikita\Desktop\git projects\FFT using matrices\src\source.cpp(106): warning C4018: <: несоответствие типов со знаком и без знака
-  FFT_using_matrices.vcxproj -> C:\Users\Nikita\Desktop\git projects\FFT using matrices\.gitignore\Debug\FFT_using_matrices.exe
