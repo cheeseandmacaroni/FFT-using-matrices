@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include "my_matrix.hpp"
+#include <omp.h>
 
 using namespace std;
 
@@ -10,13 +11,11 @@ using namespace std;
 #define w(N,k) (complex<el_type>(cos(2*Pi*k/N), -sin(2*Pi*k/N)))
 #define dft_w(N,n,k) (complex<el_type>(cos(2*Pi*k*n/N), -sin(2*Pi*k*n/N)))
 
-
-
 vector<complex<el_type>> operator*(m_square_matrix<complex<el_type>> &a, vector<complex<el_type>> &b)
 {
 	int n = a.get_size();
 	vector<complex<el_type>> res(n, 0);
-	#pragma omp parallel for
+	//#pragma omp parallel for
 	for (int i = 0; i < n; ++i)
 		for (int j = 0; j < n; ++j)
 			res[i] += a.get_elem(i,j) * b[j];
@@ -24,9 +23,24 @@ vector<complex<el_type>> operator*(m_square_matrix<complex<el_type>> &a, vector<
 }
 
 template<typename T>
-void matrix_block_multiplication(m_square_matrix<T> &a, m_square_matrix<T> &b, m_square_matrix<T> &res, int sub_size)
+void matrix_block_multiplication(m_square_matrix<T> &a, m_square_matrix<T> &b, m_square_matrix<T> &res, T null, int sub_size)
 {
-
+	T tmp;
+	res.set_all_elements(null);
+	int N = a.get_size();
+	for (int jj = 0; jj < N; jj += sub_size) {
+		for (int kk = 0; kk < N; kk += sub_size) {
+			for (int i = 0; i < N; ++i) {
+				for (int j = jj; j < ((jj + sub_size) > N ? N : (jj + sub_size)); ++j) {
+					tmp = null;
+					for (int k = kk; k < ((kk + sub_size) > N ? N : (kk + sub_size)); ++k) {
+						tmp = tmp + a.get_elem(i, k) * b.get_elem(k, j);
+					}
+					res.get_elem(i, j) = res.get_elem(i, j) + tmp;
+				}
+			}
+		}
+	}
 }
 
 template <typename T>
@@ -73,6 +87,9 @@ void FFT(vector<complex<el_type>> &x)
 	int n = x.size();
 	x = pre_permutation_algorithm(x);
 	m_square_matrix<complex<el_type>> tmp(n, complex<el_type>(0, 0));
+	m_square_matrix<complex<el_type>> res1;
+	m_square_matrix<complex<el_type>> res2(n,complex<el_type>(0, 0));
+	bool flag = true;
 	vector<complex<el_type>> pre_calculated_wnk(n/2);
 	for (int i = 0; i < n / 2; ++i)
 	{
@@ -92,7 +109,56 @@ void FFT(vector<complex<el_type>> &x)
 				tmp.get_elem(j + sub_sequence_size / 2 + t * sub_sequence_size , j + sub_sequence_size / 2 + t * sub_sequence_size) = -pre_calculated_wnk[j*n / sub_sequence_size];
 			}
 		}
-		x = tmp*x;
+		if (i != 1)
+		{
+			if (flag)
+			{
+				matrix_block_multiplication(tmp, res1, res2, complex<el_type>(0,0), 2);
+				flag = false;
+			}
+			else if (!flag)
+			{
+				matrix_block_multiplication(tmp, res2, res1, complex<el_type>(0, 0), 2);
+				flag = true;
+			}
+		}
+		else if (i == 1)
+		{
+			res1 = tmp;
+		}
+		tmp.set_all_elements(complex<el_type>(0, 0));
+	}
+	if (flag)
+		x = res1 * x;
+	else if(!flag)
+		x = res2 * x;
+}
+
+void old_FFT(vector<complex<el_type>> &x)
+{
+	int n = x.size();
+	x = pre_permutation_algorithm(x);
+	m_square_matrix<complex<el_type>> tmp(n, complex<el_type>(0, 0));
+	vector<complex<el_type>> pre_calculated_wnk(n / 2);
+	for (int i = 0; i < n / 2; ++i)
+	{
+		pre_calculated_wnk[i] = w(n, i);
+	}
+	int iterations = my_log_2(n);
+	for (int i = 1; i <= iterations; ++i)
+	{
+		int sub_sequence_size = pow(2, i);
+		for (int j = 0; j < sub_sequence_size / 2; ++j)
+		{
+			for (int t = 0; t < n / sub_sequence_size; ++t)
+			{
+				tmp.get_elem(j + t * sub_sequence_size, j + t * sub_sequence_size) = 1;
+				tmp.get_elem(j + t * sub_sequence_size, j + sub_sequence_size / 2 + t * sub_sequence_size) = pre_calculated_wnk[j*n / sub_sequence_size];
+				tmp.get_elem(j + sub_sequence_size / 2 + t * sub_sequence_size, j + t * sub_sequence_size) = 1;
+				tmp.get_elem(j + sub_sequence_size / 2 + t * sub_sequence_size, j + sub_sequence_size / 2 + t * sub_sequence_size) = -pre_calculated_wnk[j*n / sub_sequence_size];
+			}
+		}
+		x = tmp * x;
 		tmp.set_all_elements(complex<el_type>(0, 0));
 	}
 }
@@ -123,7 +189,7 @@ bool check(el_type epsilon, vector<complex<el_type>> &x, vector<complex<el_type>
 
 int main()
 {
-	int n = 8192;
+	int n = 64;
 	double start;
 	double finish;
 	vector<complex<el_type>> x(n, complex<el_type>());
@@ -135,20 +201,23 @@ int main()
 	start = omp_get_wtime();
 	FFT(x);
 	finish = omp_get_wtime();
-	/*DFT(y);
-	for (int i = 0; i < n; ++i)
-	{
-		cout << x[i] << "!!!!!" << y[i] << endl;
-	}*/
-	cout << finish - start << "forward fft" << endl; 
+	cout << finish - start << "matrix fft" << endl;
 	start = omp_get_wtime();
-	reverse(++begin(x), end(x));//
-	FFT(x);						//inverse FFT using forward FFT
-	for (int i = 0; i < n; ++i) //
-		x[i] /= n;				//
+	old_FFT(y);
 	finish = omp_get_wtime();
-	cout << finish - start << "inverse fft" << endl;
-
-
+	cout << finish - start << "vector fft" << endl;
+	//DFT(y);
+	//for (int i = 0; i < n; ++i)
+	//{
+	//	cout << x[i] << "!!!!!" << y[i] << endl;
+	//}
+	//cout << finish - start << "forward fft" << endl; 
+	//start = omp_get_wtime();
+	//reverse(++begin(x), end(x));//
+	//FFT(x);						//inverse FFT using forward FFT
+	//for (int i = 0; i < n; ++i) //
+	//	x[i] /= n;				//
+	//finish = omp_get_wtime();
+	//cout << finish - start << "inverse fft" << endl;
 	return 0;
 }

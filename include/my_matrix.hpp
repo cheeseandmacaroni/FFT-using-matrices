@@ -1,20 +1,19 @@
 #ifndef MY_MATRIX_HPP
 #define MY_MATRIX_HPP
-#include <omp.h>
-
 template <class T>
 class m_square_matrix
 {
 public:
-	m_square_matrix(int n) :size(n)
+	m_square_matrix() : size(0), arr(nullptr) {};
+	m_square_matrix(int n) : size(n)
 	{
 		arr = new T[n * n];
 	}
-	m_square_matrix(const m_square_matrix &obj):size(0), arr(nullptr)
+	m_square_matrix(const m_square_matrix &other) :size(0), arr(nullptr)
 	{
-		*this = obj;
+		*this = other;
 	}
-	m_square_matrix(int n, T value):size(n)
+	m_square_matrix(int n, T value) :size(n)
 	{
 		arr = new T[n * n];
 		set_all_elements(value);
@@ -23,17 +22,18 @@ public:
 	{
 		delete[] arr;
 	}
-	m_square_matrix& operator=(const m_square_matrix &obj)
+	m_square_matrix& operator=(const m_square_matrix &other)
 	{
-		if (this->size != obj.size && this->arr != obj.arr)
+		if (this->size != other.size && this->arr != other.arr)
 		{
-			size = obj.size;
+			size = other.size;
 			if (arr != nullptr)
 				delete[] arr;
 			arr = new T[size * size];
+#pragma omp parallel for num_threads(2)
 			for (int i = 0; i < size*size; ++i)
 			{
-				arr[i] = obj.arr[i];
+				arr[i] = other.arr[i];
 			}
 		}
 		return *this;
@@ -45,7 +45,7 @@ public:
 	int get_size() const { return size; }
 	inline void set_all_elements(T value)
 	{
-		#pragma omp parallel for num_threads(2)
+#pragma omp parallel for num_threads(2)
 		for (int i = 0; i < size * size; ++i)
 		{
 			arr[i] = value;
@@ -55,5 +55,4 @@ private:
 	T* arr;
 	int size;
 };
-
 #endif
