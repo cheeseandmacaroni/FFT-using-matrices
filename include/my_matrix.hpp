@@ -30,7 +30,7 @@ public:
 			if (arr != nullptr)
 				delete[] arr;
 			arr = new T[size * size];
-#pragma omp parallel for num_threads(2)
+			#pragma omp parallel for num_threads(2)
 			for (int i = 0; i < size*size; ++i)
 			{
 				arr[i] = other.arr[i];
@@ -45,7 +45,7 @@ public:
 	int get_size() const { return size; }
 	inline void set_all_elements(T value)
 	{
-#pragma omp parallel for num_threads(2)
+#pragma omp parallel for 
 		for (int i = 0; i < size * size; ++i)
 		{
 			arr[i] = value;
